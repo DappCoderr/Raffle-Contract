@@ -26,23 +26,38 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-contract Raffle{
+import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+
+contract Raffle is VRFConsumerBaseV2{
 
     /**Custom Errors */
     error Raffle_NotEnoughtEthSent();
 
-    /**State Variables */
+    /** State Variables */
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint32 private constant NUM_WORDS = 1;
+
     uint256 private immutable i_entranceFee;
     uint256 private immutable i_interval;
+    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
+    bytes32 private immutable i_gasLane;
+    uint64 private immutable i_subscriptionId;
+    uint32 private immutable i_callbackGasLimit;
+
     uint256 public s_raffleStartingTime;
 
     /**Events */
     event EnterRaffle(address indexed player);
 
-    constructor(uint256 entranceFee, uint256 interval){
+    constructor(uint256 entranceFee, uint256 interval, address vrf_coordinator, bytes32 gasLane, uint64 subscriptionId, uint32 callbackGasLimit)
+     VRFConsumerBaseV2(vrf_coordinator){
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_raffleStartingTime = block.timestamp;
+        i_vrfCoordinator = VRFCoordinatorV2Interface(vrf_coordinator);
+        i_gasLane = gasLane;
+        i_subscriptionId = subscriptionId;
     }
 
     function enterRaffle() external payable{
@@ -56,6 +71,28 @@ contract Raffle{
         if(block.timestamp - s_raffleStartingTime < i_interval){
             revert();
         }
+
+        // 1. Request the RNG <- from chainlink
+        // 2. Get the random number <- chainlink node send us
+
+        // Now what will happen
+        /**
+         * We will make the request to the chainlink node to give us the random number.
+         * It will generate the random number and call the onchain contract vrf-coordinator where only chainlink node can respond to that.
+         * That contract will call rawFullfillRandomWords --> that will call fullFillRandomWords
+         */
+
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
+            i_gasLane, 
+            i_subscriptionId, 
+            REQUEST_CONFIRMATIONS, 
+            i_callbackGasLimit, 
+            NUM_WORDS
+        );
+    }
+
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+        
     }
 
     /**Getter Function */
