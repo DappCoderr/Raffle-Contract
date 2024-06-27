@@ -33,6 +33,14 @@ contract Raffle is VRFConsumerBaseV2{
 
     /**Custom Errors */
     error Raffle_NotEnoughtEthSent();
+    error Raffle_TransferFailed();
+    error Raffle_RaffleNotOpen();
+
+    /** Enums */
+    enum RaffleState {
+        OPEN,
+        CALCULATING
+    }
 
     /** State Variables */
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -45,7 +53,10 @@ contract Raffle is VRFConsumerBaseV2{
     uint64 private immutable i_subscriptionId;
     uint32 private immutable i_callbackGasLimit;
 
+    address payable[] private s_player;
     uint256 public s_raffleStartingTime;
+    address payable private s_recentWinner; 
+    RaffleState private s_raffleState;
 
     /**Events */
     event EnterRaffle(address indexed player);
@@ -58,12 +69,17 @@ contract Raffle is VRFConsumerBaseV2{
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrf_coordinator);
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
+        s_raffleState = RaffleState.OPEN;
     }
 
     function enterRaffle() external payable{
         if(msg.value > i_entranceFee){
             revert Raffle_NotEnoughtEthSent();
         }
+        if(s_raffleState != RaffleState.OPEN){
+            revert Raffle_RaffleNotOpen();
+        }
+        s_player.push(payable(msg.sender));
         emit EnterRaffle(msg.sender);
     }
 
@@ -81,7 +97,7 @@ contract Raffle is VRFConsumerBaseV2{
          * It will generate the random number and call the onchain contract vrf-coordinator where only chainlink node can respond to that.
          * That contract will call rawFullfillRandomWords --> that will call fullFillRandomWords
          */
-
+        s_raffleState = RaffleState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, 
             i_subscriptionId, 
@@ -92,7 +108,13 @@ contract Raffle is VRFConsumerBaseV2{
     }
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
-        
+        uint256 indexOfWinner = randomWords[0] % s_player.length;
+        s_recentWinner = s_player[indexOfWinner];
+        s_raffleState = RaffleState.OPEN;
+        (bool success, ) = s_recentWinner.call{value: address(this).balance}("");
+        if(!success){
+            revert Raffle_TransferFailed();
+        }
     }
 
     /**Getter Function */
