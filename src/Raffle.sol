@@ -111,6 +111,10 @@ contract Raffle is VRFConsumerBaseV2{
         uint256 indexOfWinner = randomWords[0] % s_player.length;
         s_recentWinner = s_player[indexOfWinner];
         s_raffleState = RaffleState.OPEN;
+
+        // Reset the array
+        s_player = new address payable[](0);
+
         (bool success, ) = s_recentWinner.call{value: address(this).balance}("");
         if(!success){
             revert Raffle_TransferFailed();
