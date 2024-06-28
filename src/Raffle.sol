@@ -35,6 +35,7 @@ contract Raffle is VRFConsumerBaseV2{
     error Raffle_NotEnoughtEthSent();
     error Raffle_TransferFailed();
     error Raffle_RaffleNotOpen();
+    error Raffle__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 raffleState);
 
     /** Enums */
     enum RaffleState {
@@ -60,7 +61,7 @@ contract Raffle is VRFConsumerBaseV2{
 
     /**Events */
     event EnterRaffle(address indexed player);
-    event pickWinner(address indexed winner);
+    event PickWinner(address indexed winner);
 
     constructor(uint256 entranceFee, uint256 interval, address vrf_coordinator, bytes32 gasLane, uint64 subscriptionId, uint32 callbackGasLimit)
      VRFConsumerBaseV2(vrf_coordinator){
@@ -84,9 +85,24 @@ contract Raffle is VRFConsumerBaseV2{
         emit EnterRaffle(msg.sender);
     }
 
-    function pickWinner() external {
-        if(block.timestamp - s_raffleStartingTime < i_interval){
-            revert();
+    function checkUpkeep(bytes memory) public view returns(bool upKeepNeeded, bytes memory){
+        bool timeHasPassed = (block.timestamp - s_raffleStartingTime) >= i_interval;
+        bool isOpen = RaffleState.OPEN == s_raffleState;
+        bool balance = address(this).balance > 0;
+        bool hasPlayers = s_player.length > 0;
+        upKeepNeeded = (timeHasPassed && isOpen && balance && hasPlayers);
+        return (upKeepNeeded, "0x0");
+    }
+
+    function performUpkeep(bytes calldata) external {
+
+        (bool upKeepNeeded,) = checkUpkeep("");
+        if(!upKeepNeeded){
+            revert() Raffle__UpkeepNotNeeded(
+                address(this).balance,
+                s_player.length,
+                uint256(s_raffleState)
+            );
         }
 
         // 1. Request the RNG <- from chainlink
