@@ -60,6 +60,7 @@ contract Raffle is VRFConsumerBaseV2{
 
     /**Events */
     event EnterRaffle(address indexed player);
+    event pickWinner(address indexed winner);
 
     constructor(uint256 entranceFee, uint256 interval, address vrf_coordinator, bytes32 gasLane, uint64 subscriptionId, uint32 callbackGasLimit)
      VRFConsumerBaseV2(vrf_coordinator){
@@ -109,7 +110,8 @@ contract Raffle is VRFConsumerBaseV2{
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         uint256 indexOfWinner = randomWords[0] % s_player.length;
-        s_recentWinner = s_player[indexOfWinner];
+        address payable winner = s_player[indexOfWinner];
+        s_recentWinner = winner;
         s_raffleState = RaffleState.OPEN;
 
         // Reset the array and the timestamp for new raffle
@@ -120,6 +122,7 @@ contract Raffle is VRFConsumerBaseV2{
         if(!success){
             revert Raffle_TransferFailed();
         }
+        emit PickWinner(winner);
     }
 
     /**Getter Function */
