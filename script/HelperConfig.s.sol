@@ -3,7 +3,12 @@ pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
 
-contract HelperConfig is Script {
+abstract contract CodeConstants {
+    uint256 public constant ETH_SEPLIA_CHAIN_ID = 11155111;
+    uint256 public constant LOCAL_CHAIN_ID = 31337;
+}
+
+contract HelperConfig is CodeConstants, Script {
 
     struct NetworkConfig {
         uint256 entranceFee;
@@ -23,10 +28,12 @@ contract HelperConfig is Script {
         return NetworkConfig({
             entranceFee: 0.01 ether,
             interval: 30,
-            vrf_coordinator:,
-            gasLane:,
-            subscriptionId:,
-            callbackGasLimit:,
-        })
+            vrf_coordinator:0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
+            gasLane:0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c,
+            subscriptionId: 0,
+            callbackGasLimit:500000
+        });
     }
+
+    function getAnvilEthConfig() public pure returns (NetworkConfig memory){}
 }
