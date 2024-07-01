@@ -98,7 +98,7 @@ contract Raffle is VRFConsumerBaseV2{
 
         (bool upKeepNeeded,) = checkUpkeep("");
         if(!upKeepNeeded){
-            revert() Raffle__UpkeepNotNeeded(
+            revert Raffle__UpkeepNotNeeded(
                 address(this).balance,
                 s_player.length,
                 uint256(s_raffleState)
