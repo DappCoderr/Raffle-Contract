@@ -10,6 +10,8 @@ abstract contract CodeConstants {
 
 contract HelperConfig is CodeConstants, Script {
 
+    error HelperConfig__InvalidChainId();
+
     struct NetworkConfig {
         uint256 entranceFee;
         uint256 interval;
@@ -22,7 +24,19 @@ contract HelperConfig is CodeConstants, Script {
     NetworkConfig public localNetworkConfig;
     mapping (uint256 chainId => NetworkConfig) public networkConfigs;
 
-    constructor(){}
+    constructor(){
+        networkConfigs[ETH_SEPLIA_CHAIN_ID] = getSepoliaEthConfig();
+    }
+
+    function getConfigByChainId(uint256 chainId) public returns(NetworkConfig memory){
+        if(networkConfigs[chainId].vrf_coordinator != address(0)){
+            return networkConfigs[chainId];
+        } else if(chainId == LOCAL_CHAIN_ID){
+            return getAnvilEthConfig();
+        } else{
+            revert HelperConfig__InvalidChainId();
+        }
+    }
 
     function getSepoliaEthConfig() public pure returns(NetworkConfig memory){
         return NetworkConfig({
@@ -35,5 +49,9 @@ contract HelperConfig is CodeConstants, Script {
         });
     }
 
-    function getAnvilEthConfig() public pure returns (NetworkConfig memory){}
+    function getAnvilEthConfig() public view returns (NetworkConfig memory){
+        if(localNetworkConfig.vrf_coordinator != address(0)){
+            return localNetworkConfig;
+        }
+    }
 }
