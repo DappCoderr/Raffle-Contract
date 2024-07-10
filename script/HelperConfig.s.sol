@@ -2,8 +2,15 @@
 pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 abstract contract CodeConstants {
+    /** VRF MOCK VALUES */
+    uint96 public MOCK_BASE_FEE = 0.25 ether;
+    uint96 public MOCK_GAS_PRICE_LINK = 1e9;
+    // LINK / ETH PRICE
+    int256 public MOCK_WEI_PER_UNIT_LINK = 4e16;
+
     uint256 public constant ETH_SEPLIA_CHAIN_ID = 11155111;
     uint256 public constant LOCAL_CHAIN_ID = 31337;
 }
@@ -38,6 +45,10 @@ contract HelperConfig is CodeConstants, Script {
         }
     }
 
+    function getConfig() public returns(NetworkConfig memory) {
+        return getConfigByChainId(block.chainId);
+    }
+
     function getSepoliaEthConfig() public pure returns(NetworkConfig memory){
         return NetworkConfig({
             entranceFee: 0.01 ether,
@@ -49,9 +60,14 @@ contract HelperConfig is CodeConstants, Script {
         });
     }
 
-    function getAnvilEthConfig() public view returns (NetworkConfig memory){
+    function getAnvilEthConfig() public returns (NetworkConfig memory){
         if(localNetworkConfig.vrf_coordinator != address(0)){
             return localNetworkConfig;
         }
+
+        // Deploy Mock contract
+        vm.startBroadcast();
+        VRFCoordinatorV2_5Mock vrfMock = new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
+        vm.stopBroadcast();
     }
 }
